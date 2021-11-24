@@ -6,7 +6,7 @@ using Scriban;
 
 namespace gen;
 
-[Generator]
+[Generator(LanguageNames.CSharp)]
 public class AutoNotifyGenerator : ISourceGenerator
 {
     private const string AttributeFile = "AutoNotifyAttribute.sbntxt";
@@ -102,8 +102,9 @@ public class AutoNotifyGenerator : ISourceGenerator
         public void OnVisitSyntaxNode(GeneratorSyntaxContext context)
         {
             // any field with at least one attribute is a candidate for property generation
-            if (context.Node is FieldDeclarationSyntax { AttributeLists.Count: > 0 } fieldDeclarationSyntax)
+            if (Parser.IsSyntaxTargetForGeneration(context.Node))
             {
+                var fieldDeclarationSyntax = Parser.GetSemanticTargetForGeneration(context);
                 foreach (var variable in fieldDeclarationSyntax.Declaration.Variables)
                 {
                     // Get the symbol being declared by the field, and keep it if its annotated with AutoNotify
@@ -118,4 +119,14 @@ public class AutoNotifyGenerator : ISourceGenerator
     }
 
     private record FieldInfo(string Type, string Name, string PropertyName);
+
+    private class Parser
+    {
+        internal static bool IsSyntaxTargetForGeneration(SyntaxNode node) => node is FieldDeclarationSyntax { AttributeLists.Count: > 0 };
+
+        internal static FieldDeclarationSyntax GetSemanticTargetForGeneration(GeneratorSyntaxContext context)
+        {
+            return (FieldDeclarationSyntax)context.Node;
+        }
+    }
 }
