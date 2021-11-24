@@ -15,7 +15,7 @@
     <ItemGroup>
         <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.0.1" PrivateAssets="all" />
         <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.3.3" PrivateAssets="all" />
-        <PackageReference Include="Scriban" Version="5.0.0" IncludeAssets="Build"/>
+        <PackageReference Include="Scriban" Version="5.0.0" IncludeAssets="Build" />
     </ItemGroup>
 
     <ItemGroup>
@@ -26,6 +26,8 @@
     <ItemGroup>
       <None Remove="AutoNotifyGenerator.sbntxt" />
       <EmbeddedResource Include="AutoNotifyGenerator.sbntxt" />
+      <None Remove="AutoNotifyAttribute.sbntxt" />
+      <EmbeddedResource Include="AutoNotifyAttribute.sbntxt" />
     </ItemGroup>
 
 </Project>

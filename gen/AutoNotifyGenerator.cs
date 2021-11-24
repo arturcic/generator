@@ -9,25 +9,14 @@ namespace gen;
 [Generator]
 public class AutoNotifyGenerator : ISourceGenerator
 {
-    private const string AttributeText = @"
-using System;
-namespace AutoNotify
-{
-    [AttributeUsage(AttributeTargets.Field, Inherited = false, AllowMultiple = false)]
-    sealed class AutoNotifyAttribute : Attribute
-    {
-        public AutoNotifyAttribute()
-        {
-        }
-        public string PropertyName { get; set; }
-    }
-}
-";
-
     public void Initialize(GeneratorInitializationContext context)
     {
         // Register the attribute source
-        context.RegisterForPostInitialization(i => i.AddSource("AutoNotifyAttribute", AttributeText));
+        context.RegisterForPostInitialization(i =>
+        {
+            var content = EmbeddedResource.GetContent("AutoNotifyAttribute.sbntxt");
+            i.AddSource("AutoNotifyAttribute", content);
+        });
 
         // Register a syntax receiver that will be created for each generation pass
         context.RegisterForSyntaxNotifications(() => new SyntaxReceiver());
@@ -41,17 +30,16 @@ namespace AutoNotify
 
         // get the added attribute, and INotifyPropertyChanged
         var attributeSymbol = context.Compilation.GetTypeByMetadataName("AutoNotify.AutoNotifyAttribute");
-        var notifySymbol = context.Compilation.GetTypeByMetadataName("System.ComponentModel.INotifyPropertyChanged");
 
         // group the fields by class, and generate the source
         foreach (var group in receiver.Fields.GroupBy(f => f.ContainingType))
         {
-            var classSource = ProcessClass(group.Key, group.ToList(), attributeSymbol, notifySymbol);
+            var classSource = ProcessClass(group.Key, group.ToList(), attributeSymbol);
             context.AddSource($"{group.Key.Name}.generated.cs", SourceText.From(classSource, Encoding.UTF8));
         }
     }
 
-    private static string ProcessClass(ITypeSymbol classSymbol, List<IFieldSymbol> fields, ISymbol attributeSymbol, ISymbol notifySymbol)
+    private static string ProcessClass(ISymbol classSymbol, IEnumerable<IFieldSymbol> fields, ISymbol attributeSymbol)
     {
         if (!classSymbol.ContainingSymbol.Equals(classSymbol.ContainingNamespace, SymbolEqualityComparer.Default))
         {

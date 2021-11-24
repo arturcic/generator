@@ -24,5 +24,4 @@ namespace app
 ";
 		await TestsHelper.RunTest(code);
 	}
-
 }
