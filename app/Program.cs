@@ -1,7 +1,7 @@
 ﻿// See https://aka.ms/new-console-template for more information
 
 using app;
-ExampleViewModelTest vm = new()
+ExampleViewModel vm = new()
 {
     Text = "Hello, World!"
 };

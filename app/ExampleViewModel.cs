@@ -2,11 +2,12 @@
 
 namespace app
 {
-    public class ExampleViewModel
+    public partial class ExampleViewModel
     {
         [AutoNotify]
-        private string text = "private field text";
+        private string text;
+        
+        [AutoNotify]
+        private int code;
 	}
 }
-
-

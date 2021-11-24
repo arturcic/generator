@@ -1,5 +1,4 @@
-﻿using System.CodeDom.Compiler;
-using System.Text;
+﻿using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
@@ -60,89 +59,38 @@ namespace AutoNotify
         }
 
         var namespaceName = classSymbol.ContainingNamespace.ToDisplayString();
-        
-        var model = new Model
+
+        const string file = "AutoNotifyGenerator.sbntxt";
+        var template = Template.Parse(EmbeddedResource.GetContent(file), file);
+        var model = new
         {
-            Namespace = namespaceName,
-            ClassName = classSymbol.Name,
+	        Namespace = namespaceName,
+	        ClassName = classSymbol.Name,
+	        Fields = fields.Select(x => GetFieldInfo(x, attributeSymbol)).ToArray()
         };
-
-        // begin building the generated source
-        var source = new IndentedTextWriter(new StringWriter());
-        source.WriteLine("#nullable enable");
-        source.WriteLine("using System.ComponentModel;");
-        source.WriteLine($"namespace {namespaceName}");
-        source.WriteLine("{");
-        source.Indent++;
-        source.WriteLine($"public partial class {classSymbol.Name} : INotifyPropertyChanged");
-        source.WriteLine("{");
-        source.Indent++;
-
-        // if the class doesn't implement INotifyPropertyChanged already, add it
-        if (!classSymbol.Interfaces.Contains(notifySymbol))
-        {
-            source.WriteLine("public event PropertyChangedEventHandler? PropertyChanged;");
-        }
-
-        // create properties for each field 
-        foreach (var fieldSymbol in fields)
-        {
-            ProcessField(source, fieldSymbol, attributeSymbol);
-        }
-
-        source.Indent--;
-        source.WriteLine("}");
-        source.Indent--;
-        source.WriteLine("}");
-
-        // var output = template.Render(model, member => member.Name);
-
-        var output = source.InnerWriter.ToString();
+        var output = template.Render(model, member => member.Name);
         return output;
     }
 
-    private static void ProcessField(IndentedTextWriter source, IFieldSymbol fieldSymbol, ISymbol attributeSymbol)
+    private static FieldInfo GetFieldInfo(IFieldSymbol fieldSymbol, ISymbol attributeSymbol)
     {
-        // get the name and type of the field
-        var fieldName = fieldSymbol.Name;
-        var fieldType = fieldSymbol.Type;
+	    // get the name and type of the field
+	    var fieldName = fieldSymbol.Name;
+	    var fieldType = fieldSymbol.Type;
 
-        // get the AutoNotify attribute from the field, and any associated data
-        var attributeData = fieldSymbol.GetAttributes().Single(ad => ad.AttributeClass.Equals(attributeSymbol, SymbolEqualityComparer.Default));
-        var overridenNameOpt = attributeData.NamedArguments.SingleOrDefault(kvp => kvp.Key == "PropertyName").Value;
+	    // get the AutoNotify attribute from the field, and any associated data
+	    var attributeData = fieldSymbol.GetAttributes().Single(ad => ad.AttributeClass.Equals(attributeSymbol, SymbolEqualityComparer.Default));
+	    var overridenNameOpt = attributeData.NamedArguments.SingleOrDefault(kvp => kvp.Key == "PropertyName").Value;
 
-        var propertyName = ChooseName(fieldName, overridenNameOpt);
-        if (propertyName.Length == 0 || propertyName == fieldName)
-        {
-            //TODO: issue a diagnostic that we can't process this field
-            return;
-        }
-        
-        source.WriteLine($"public {fieldType} {propertyName} ");
-        source.WriteLine("{");
-        source.Indent++;
-        source.WriteLine("get");
-        source.WriteLine("{");
-        source.Indent++;
-        source.WriteLine($"return this.{fieldName};");
-        source.Indent--;
-        source.WriteLine("}");
-        source.WriteLine("set");
-        source.WriteLine("{");
-        source.Indent++;
-        source.WriteLine($"if (this.{fieldName} != value)");
-        source.WriteLine("{");
-        source.Indent++;
-        source.WriteLine($"this.{fieldName} = value;");
-        source.WriteLine($"this.PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof({propertyName})));");
-        source.Indent--;
-        source.WriteLine("}");
-        source.Indent--;
-        source.WriteLine("}");
-        source.Indent--;
-        source.WriteLine("}");
-
+	    var propertyName = ChooseName(fieldName, overridenNameOpt);
+	    return new FieldInfo
+	    {
+            Name = fieldName,
+            PropertyName = propertyName,
+            Type = fieldType.ToDisplayString()
+	    };
     }
+
     private static string ChooseName(string fieldName, TypedConstant overridenNameOpt)
     {
 	    if (!overridenNameOpt.IsNull)
@@ -189,9 +137,10 @@ namespace AutoNotify
         }
     }
 
-    private record Model
+    private class FieldInfo
     {
-        public string Namespace { get; set; }
-        public string ClassName { get; set; }
+	    public string Type { get; set; }
+	    public string Name { get; set; }
+	    public string PropertyName { get; set; }
     }
 }

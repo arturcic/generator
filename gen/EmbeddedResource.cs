@@ -12,25 +12,31 @@ internal static class EmbeddedResource
         if (File.Exists(filePath))
             return File.ReadAllText(filePath);
 
-        var baseName = Assembly.GetExecutingAssembly().GetName().Name;
-        var resourceName = relativePath
-            .TrimStart('.')
-            .Replace(Path.DirectorySeparatorChar, '.')
-            .Replace(Path.AltDirectorySeparatorChar, '.');
+        var executingAssembly = Assembly.GetExecutingAssembly();
 
-        var manifestResourceName = Assembly.GetExecutingAssembly()
-            .GetManifestResourceNames().FirstOrDefault(x => x.EndsWith(resourceName));
+        return GetEmbeddedResourceContent(relativePath, executingAssembly);
+    }
+    private static string GetEmbeddedResourceContent(string relativePath, Assembly executingAssembly)
+    {
+	    var baseName = executingAssembly.GetName().Name;
+	    var resourceName = relativePath
+		    .TrimStart('.')
+		    .Replace(Path.DirectorySeparatorChar, '.')
+		    .Replace(Path.AltDirectorySeparatorChar, '.');
 
-        if (string.IsNullOrEmpty(manifestResourceName))
-            throw new InvalidOperationException($"Did not find required resource ending in '{resourceName}' in assembly '{baseName}'.");
+	    var manifestResourceName = executingAssembly
+		    .GetManifestResourceNames().FirstOrDefault(x => x.EndsWith(resourceName));
 
-        using var stream = Assembly.GetExecutingAssembly()
-            .GetManifestResourceStream(manifestResourceName);
+	    if (string.IsNullOrEmpty(manifestResourceName))
+		    throw new InvalidOperationException($"Did not find required resource ending in '{resourceName}' in assembly '{baseName}'.");
 
-        if (stream == null)
-            throw new InvalidOperationException($"Did not find required resource '{manifestResourceName}' in assembly '{baseName}'.");
+	    using var stream = executingAssembly
+		    .GetManifestResourceStream(manifestResourceName);
 
-        using var reader = new StreamReader(stream);
-        return reader.ReadToEnd();
+	    if (stream == null)
+		    throw new InvalidOperationException($"Did not find required resource '{manifestResourceName}' in assembly '{baseName}'.");
+
+	    using var reader = new StreamReader(stream);
+	    return reader.ReadToEnd();
     }
 }
