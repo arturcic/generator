@@ -9,14 +9,15 @@ namespace gen;
 [Generator]
 public class AutoNotifyGenerator : ISourceGenerator
 {
-    public void Initialize(GeneratorInitializationContext context)
+	private const string AttributeFile = "AutoNotifyAttribute.sbntxt";
+	private const string GeneratorFile = "AutoNotifyGenerator.sbntxt";
+	private static readonly string AttributeContent = EmbeddedResource.GetContent(AttributeFile);
+	private static readonly string GeneratorContent = EmbeddedResource.GetContent(GeneratorFile);
+
+	public void Initialize(GeneratorInitializationContext context)
     {
         // Register the attribute source
-        context.RegisterForPostInitialization(i =>
-        {
-            var content = EmbeddedResource.GetContent("AutoNotifyAttribute.sbntxt");
-            i.AddSource("AutoNotifyAttribute", content);
-        });
+        context.RegisterForPostInitialization(i => i.AddSource("AutoNotifyAttribute", AttributeContent));
 
         // Register a syntax receiver that will be created for each generation pass
         context.RegisterForSyntaxNotifications(() => new SyntaxReceiver());
@@ -48,16 +49,14 @@ public class AutoNotifyGenerator : ISourceGenerator
 
         var namespaceName = classSymbol.ContainingNamespace.ToDisplayString();
 
-        const string file = "AutoNotifyGenerator.sbntxt";
-        var template = Template.Parse(EmbeddedResource.GetContent(file), file);
+        var template = Template.Parse(GeneratorContent, GeneratorFile);
         var model = new
         {
 	        Namespace = namespaceName,
 	        ClassName = classSymbol.Name,
 	        Fields = fields.Select(x => GetFieldInfo(x, attributeSymbol)).ToArray()
         };
-        var output = template.Render(model, member => member.Name);
-        return output;
+        return template.Render(model, member => member.Name);
     }
 
     private static FieldInfo GetFieldInfo(IFieldSymbol fieldSymbol, ISymbol attributeSymbol)
@@ -67,7 +66,7 @@ public class AutoNotifyGenerator : ISourceGenerator
 	    var fieldType = fieldSymbol.Type;
 
 	    // get the AutoNotify attribute from the field, and any associated data
-	    var attributeData = fieldSymbol.GetAttributes().Single(ad => ad.AttributeClass.Equals(attributeSymbol, SymbolEqualityComparer.Default));
+	    var attributeData = fieldSymbol.GetAttributes().Single(ad => ad.AttributeClass != null && ad.AttributeClass.Equals(attributeSymbol, SymbolEqualityComparer.Default));
 	    var overridenNameOpt = attributeData.NamedArguments.SingleOrDefault(kvp => kvp.Key == "PropertyName").Value;
 
 	    var propertyName = ChooseName(fieldName, overridenNameOpt);
@@ -83,17 +82,16 @@ public class AutoNotifyGenerator : ISourceGenerator
     {
 	    if (!overridenNameOpt.IsNull)
 	    {
-		    return overridenNameOpt.Value.ToString();
+		    return overridenNameOpt.Value?.ToString();
 	    }
 
 	    fieldName = fieldName.TrimStart('_');
-	    if (fieldName.Length == 0)
-		    return string.Empty;
-
-	    if (fieldName.Length == 1)
-		    return fieldName.ToUpper();
-
-	    return fieldName.Substring(0, 1).ToUpper() + fieldName.Substring(1);
+	    return fieldName.Length switch
+	    {
+		    0 => string.Empty,
+		    1 => fieldName.ToUpper(),
+		    _ => fieldName.Substring(0, 1).ToUpper() + fieldName.Substring(1)
+	    };
     }
 
     /// <summary>
@@ -109,14 +107,13 @@ public class AutoNotifyGenerator : ISourceGenerator
         public void OnVisitSyntaxNode(GeneratorSyntaxContext context)
         {
             // any field with at least one attribute is a candidate for property generation
-            if (context.Node is FieldDeclarationSyntax fieldDeclarationSyntax
-                && fieldDeclarationSyntax.AttributeLists.Count > 0)
+            if (context.Node is FieldDeclarationSyntax { AttributeLists.Count: > 0 } fieldDeclarationSyntax)
             {
                 foreach (var variable in fieldDeclarationSyntax.Declaration.Variables)
                 {
-                    // Get the symbol being declared by the field, and keep it if its annotated
-                    var fieldSymbol = context.SemanticModel.GetDeclaredSymbol(variable) as IFieldSymbol;
-                    if (fieldSymbol.GetAttributes().Any(ad => ad.AttributeClass.ToDisplayString() == "AutoNotify.AutoNotifyAttribute"))
+                    // Get the symbol being declared by the field, and keep it if its annotated with AutoNotify
+                    if (context.SemanticModel.GetDeclaredSymbol(variable) is IFieldSymbol fieldSymbol 
+                        && fieldSymbol.GetAttributes().Any(ad => ad.AttributeClass?.ToDisplayString() == "AutoNotify.AutoNotifyAttribute"))
                     {
                         Fields.Add(fieldSymbol);
                     }
