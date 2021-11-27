@@ -14,10 +14,7 @@ public class GeneratorUtils
 
     internal static bool IsSyntaxTargetForGeneration(SyntaxNode node) => node is FieldDeclarationSyntax { AttributeLists.Count: > 0 };
 
-    internal static FieldDeclarationSyntax GetSemanticTargetForGeneration(GeneratorSyntaxContext context)
-    {
-        return (FieldDeclarationSyntax)context.Node;
-    }
+    internal static FieldDeclarationSyntax GetSemanticTargetForGeneration(GeneratorSyntaxContext context) => (FieldDeclarationSyntax)context.Node;
     internal static string GenerateClassSource(ISymbol classSymbol, IEnumerable<IFieldSymbol> fields, ISymbol? attributeSymbol)
     {
         if (!classSymbol.ContainingSymbol.Equals(classSymbol.ContainingNamespace, SymbolEqualityComparer.Default))
