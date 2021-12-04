@@ -4,30 +4,34 @@ using Spectre.Console.Cli;
 
 namespace app.Commands;
 
-public class HelloCommand : Command<HelloCommand.HelloSettings>
+public class Settings : LogCommandSettings
 {
-    private ILogger<HelloCommand> _logger;
-    private IAnsiConsole _console;
+    [CommandArgument(0, $"[{nameof(Name)}]")] 
+    public string Name { get; set; }
+}
 
+public partial class HelloCommand : Command<Settings>
+{
+    public override int Execute(CommandContext context, Settings settings) => Execute(settings);
+}
+
+public partial class HelloCommand
+{
+    private readonly ILogger logger;
+    private readonly IAnsiConsole console;
+    
     public HelloCommand(IAnsiConsole console, ILogger<HelloCommand> logger)
     {
-        _console = console;
-        _logger = logger;
-        _logger.LogDebug("{0} initialized", nameof(HelloCommand));
+        this.console = console;
+        this.logger = logger;
+        this.logger.LogDebug("{command} initialized", nameof(HelloCommand));
     }
 
-    public class HelloSettings : LogCommandSettings
+    public int Execute(Settings settings)
     {
-        [CommandArgument(0, "[Name]")]
-        public string Name { get; set; }
-    }
-
-
-    public override int Execute(CommandContext context, HelloSettings helloSettings)
-    {
-        _logger.LogInformation("Starting my command");
-        _console.MarkupLine($"Hello, [blue]{helloSettings.Name}[/]");
-        _logger.LogInformation("Completed my command");
+        logger.LogInformation("Starting my command");
+        console.MarkupLine($"Hello, [red]{settings.Name}[/]");
+        logger.LogInformation("Completed my command");
 
         return 0;
     }

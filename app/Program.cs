@@ -18,10 +18,9 @@ var serviceCollection = new ServiceCollection()
             // the log enricher will add a new property with the log file path from the settings
             // that we can use to set the path dynamically
             .Enrich.With<LoggingEnricher>()
-            // serilog.sinks.map will defer the configuration of the sink to be ondemand
+            // serilog.sinks.map will defer the configuration of the sink to be on demand
             // allowing us to look at the properties set by the enricher to set the path appropriately
-            .WriteTo.Map(LoggingEnricher.LogFilePathPropertyName,
-                (logFilePath, wt) => wt.File($"{logFilePath}"), 1)
+            .WriteTo.Map(LoggingEnricher.LogFilePathPropertyName, (logFilePath, wt) => wt.File(logFilePath), 1)
             .CreateLogger()
         )
     );
@@ -32,7 +31,7 @@ var app = new CommandApp(registrar);
 app.Configure(config =>
 {
     config.SetInterceptor(new LogInterceptor()); // add the interceptor
-    config.AddCommand<HelloCommand>("hello");
+    config.AddCommand<HelloCommand>("hello").WithDescription("Say hello");
 });
 
 return app.Run(args);

@@ -13,7 +13,11 @@ public class LogInterceptor : ICommandInterceptor
         if (settings is LogCommandSettings logSettings)
         {
             LoggingEnricher.Path = logSettings.LogFile ?? "application.log";
-            LogLevel.MinimumLevel = logSettings.LogLevel;
+            
+            if (logSettings.LogLevel != null)
+            {
+                LogLevel.MinimumLevel = logSettings.LogLevel.Value;
+            }
         }
     }
 }

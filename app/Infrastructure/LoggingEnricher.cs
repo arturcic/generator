@@ -5,8 +5,8 @@ namespace app.Infrastructure;
 
 internal class LoggingEnricher : ILogEventEnricher
 {
-    private string _cachedLogFilePath;
-    private LogEventProperty _cachedLogFilePathProperty;
+    private string? cachedLogFilePath;
+    private LogEventProperty? cachedLogFilePathProperty;
 
     // this path and level will be set by the LogInterceptor.cs after parsing the settings
     public static string Path = string.Empty;
@@ -19,17 +19,17 @@ internal class LoggingEnricher : ILogEventEnricher
         // we won't have the setting so a default value for the log file will be required
         LogEventProperty logFilePathProperty;
 
-        if (_cachedLogFilePathProperty != null && Path.Equals(_cachedLogFilePath))
+        if (cachedLogFilePathProperty != null && Path.Equals(cachedLogFilePath))
         {
             // Path hasn't changed, so let's use the cached property
-            logFilePathProperty = _cachedLogFilePathProperty;
+            logFilePathProperty = cachedLogFilePathProperty;
         }
         else
         {
             // We've got a new path for the log. Let's create a new property
             // and cache it for future log events to use
-            _cachedLogFilePath = Path;
-            _cachedLogFilePathProperty = logFilePathProperty = propertyFactory.CreateProperty(LogFilePathPropertyName, Path);
+            cachedLogFilePath = Path;
+            cachedLogFilePathProperty = logFilePathProperty = propertyFactory.CreateProperty(LogFilePathPropertyName, Path);
         }
 
         logEvent.AddPropertyIfAbsent(logFilePathProperty);
